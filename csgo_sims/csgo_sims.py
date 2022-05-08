@@ -1,7 +1,7 @@
 import pandas as pd
 from random import choice,randint,uniform
 from datetime import datetime
-from elo import Rating,rate_1vs1,quality_1vs1
+from .elo_system import Rating,rate_1vs1,quality_1vs1
 
 def isbo3(team1,team2):
     if team1.wins == 2 or team1.losses == 2 or team2.wins == 2 or team2.losses == 2:
@@ -75,7 +75,7 @@ class Table:
         for t in self.teams.keys():
             self.teams[t].reset()
 
-    def do_sims(self,play_func,nsims=100,nstages=5,verbose=True):
+    def do_sims(self,play_func,nsims=100,nstages=5,verbose=True,file=None):
         data = {}
         for i in self.teams_in_stage:
             data[i] = {"promotion%":0,"(3-0)%":0,"(3-1)%":0,"(3-2)%":0,"(2-3)%":0,"(1-3)%":0,"(0-3)%":0}
@@ -98,7 +98,16 @@ class Table:
             team_list.sort(key=lambda x:data[x]["promotion%"],reverse=True)
             for i in team_list:
                 print("{:<16} {:>10} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6}".format(i,*[str(round((data[i][key]*100)))+"%" for key in data[i].keys()]))
-                #print("{:<16} {:>4}".format(i,str(round((data[i]["promotion%"]*100)))+"%"))
+
+        if file != None:
+            with open(file,"w") as f:
+                f.write("{:<16} {:>10} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6}".format("Team","Promotion%","(3-0)%","(3-1)%","(3-2)%","(2-3)%","(1-3)%","(0-3)%\n"))
+                f.write("=====================================================================\n")
+                team_list = self.teams_in_stage
+                team_list.sort(key=lambda x:data[x]["promotion%"],reverse=True)
+                for i in team_list:
+                    f.write("{:<16} {:>10} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6}\n".format(i,*[str(round((data[i][key]*100)))+"%" for key in data[i].keys()]))
+
         return data
 
     def play(self,play_func,verbose=True,nstages=5):
@@ -297,6 +306,7 @@ opening_games = pd.read_csv("csgo_sims/round1.csv")
 team1s = opening_games['team1'].tolist()
 team2s = opening_games['team2'].tolist()
 round1matches = list(zip(team1s,team2s))
+teamsintournament = team1s + team2s
 
 recentmatches = []
 matchesdf = pd.read_csv("csgo_sims/matches.csv")
