@@ -1,6 +1,7 @@
 import pandas as pd
 from random import choice,randint,uniform
 from datetime import datetime
+from elo import Rating,rate_1vs1,quality_1vs1
 
 def isbo3(team1,team2):
     if team1.wins == 2 or team1.losses == 2 or team2.wins == 2 or team2.losses == 2:
@@ -308,5 +309,45 @@ bo3s = matchesdf['bo3'].tolist()
 for winner,loser,winnerscore,loserscore,date,bo3 in zip(winners,losers,winnerscores,loserscores,dates,bo3s):
     match = {"winner":winner,"loser":loser,"score":(winnerscore,loserscore),"date":date,"bo3":bo3}
     recentmatches.append(match)
+recentmatches.sort(key=lambda x:x["date"])
+
+teamelo = {}
+
+start_elo = 1000
+
+for match in recentmatches:
+    winner = match["winner"]
+    if winner == "Virtus.pro":
+        winner = "Outsiders"
+    if winner == "Cloud9":
+        winner = "OldC9"
+    if winner == "Gambit":
+        winner = "Cloud9"
+    if not winner in teamelo:
+        teamelo[winner] = Rating(1000)
+    loser = match["loser"]
+    if not loser in teamelo:
+        teamelo[loser] = Rating(1000)
+    score = match["score"]
+    for i in range(score[0]):
+        teamelo[winner],teamelo[loser] = rate_1vs1(teamelo[winner],teamelo[loser])
+    for i in range(score[1]):
+        teamelo[loser],teamelo[winner] = rate_1vs1(teamelo[loser],teamelo[winner])
+
+for team_name in teamelo.keys():
+    teamelo[team_name] = float(teamelo[team_name])
+    if team_name in teams:
+        teams[team_name].stats["elo"] = float(teamelo[team_name])
+
+def elohead2head(team1,team2):
+    if isinstance(team1,Team):
+        r1 = Rating(team1.stats["elo"])
+    else:
+        r1 = Rating(team1)
+    if isinstance(team2,Team):
+        r2 = Rating(team2.stats["elo"])
+    else:
+        r2 = Rating(team2)
+    return quality_1vs1(r1,r2)
 
 table = Table(round1matches, teams)
