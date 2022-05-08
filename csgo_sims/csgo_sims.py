@@ -1,5 +1,6 @@
 import pandas as pd
 from random import choice,randint,uniform
+from datetime import datetime
 
 def isbo3(team1,team2):
     if team1.wins == 2 or team1.losses == 2 or team2.wins == 2 or team2.losses == 2:
@@ -59,6 +60,10 @@ class Match:
 class Table:
     def __init__(self,round1,teams):
         self.round1 = round1
+        self.teams_in_stage = []
+        for i in self.round1:
+            self.teams_in_stage.append(i[0])
+            self.teams_in_stage.append(i[1])
         self.teams = teams
         self.reset()
 
@@ -71,7 +76,7 @@ class Table:
 
     def do_sims(self,play_func,nsims=100,nstages=5,verbose=True):
         data = {}
-        for i in self.teams.keys():
+        for i in self.teams_in_stage:
             data[i] = {"promotion%":0,"(3-0)%":0,"(3-1)%":0,"(3-2)%":0,"(2-3)%":0,"(1-3)%":0,"(0-3)%":0}
         for sim in range(nsims):
             results = self.play(play_func,verbose=False,nstages=nstages)
@@ -82,13 +87,13 @@ class Table:
                 strkey = "(" + str(key[0]) + "-" + str(key[1]) + ")%"
                 for i in results[key]:
                     data[i][strkey] += 1
-        for i in self.teams.keys():
+        for i in self.teams_in_stage:
             for j in data[i].keys():
                 data[i][j] = data[i][j]/nsims
         if verbose:
             print("{:<16} {:>10} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6}".format("Team","Promotion%","(3-0)%","(3-1)%","(3-2)%","(2-3)%","(1-3)%","(0-3)%"))
             print("=====================================================================")
-            team_list = list(self.teams.keys())
+            team_list = self.teams_in_stage
             team_list.sort(key=lambda x:data[x]["promotion%"],reverse=True)
             for i in team_list:
                 print("{:<16} {:>10} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6}".format(i,*[str(round((data[i][key]*100)))+"%" for key in data[i].keys()]))
@@ -281,7 +286,7 @@ def hltv_rating_only(team1,team2):
 
     return winner,GameStats(rd,(winner_score,loser_score))
 
-team_stats = pd.read_csv("csgo_sims/team-stats.csv")
+team_stats = pd.read_csv("csgo_sims/team-stats2.csv")
 team_stats = team_stats.set_index("name")
 teams = {}
 for team_name in team_stats.index.values:
@@ -291,5 +296,17 @@ opening_games = pd.read_csv("csgo_sims/round1.csv")
 team1s = opening_games['team1'].tolist()
 team2s = opening_games['team2'].tolist()
 round1matches = list(zip(team1s,team2s))
+
+recentmatches = []
+matchesdf = pd.read_csv("csgo_sims/matches.csv")
+winners = matchesdf['winner'].tolist()
+losers = matchesdf['loser'].tolist()
+winnerscores = matchesdf['winnerscore'].tolist()
+loserscores = matchesdf['loserscore'].tolist()
+dates = [datetime.utcfromtimestamp(i) for i in matchesdf['date'].tolist()]
+bo3s = matchesdf['bo3'].tolist()
+for winner,loser,winnerscore,loserscore,date,bo3 in zip(winners,losers,winnerscores,loserscores,dates,bo3s):
+    match = {"winner":winner,"loser":loser,"score":(winnerscore,loserscore),"date":date,"bo3":bo3}
+    recentmatches.append(match)
 
 table = Table(round1matches, teams)
