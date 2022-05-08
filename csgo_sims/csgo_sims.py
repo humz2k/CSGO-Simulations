@@ -1,6 +1,11 @@
 import pandas as pd
 from random import choice,randint,uniform
 
+def isbo3(team1,team2):
+    if team1.wins == 2 or team1.losses == 2 or team2.wins == 2 or team2.losses == 2:
+        return True
+    return False
+
 class Team:
     def __init__(self,name,stats):
         self.name = name
@@ -276,13 +281,13 @@ def hltv_rating_only(team1,team2):
 
     return winner,GameStats(rd,(winner_score,loser_score))
 
-team_stats = pd.read_csv("team-stats.csv")
+team_stats = pd.read_csv("csgo_sims/team-stats.csv")
 team_stats = team_stats.set_index("name")
 teams = {}
 for team_name in team_stats.index.values:
     teams[team_name] = Team(team_name,team_stats.loc[team_name].to_dict())
 
-opening_games = pd.read_csv("round1.csv")
+opening_games = pd.read_csv("csgo_sims/round1.csv")
 team1s = opening_games['team1'].tolist()
 team2s = opening_games['team2'].tolist()
 round1matches = list(zip(team1s,team2s))
