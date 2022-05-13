@@ -97,6 +97,12 @@ class Matches:
             if not temp in matches:
                 matches.append(temp)
         self.df = pd.DataFrame.from_dict(matches)
+    
+    def __getitem__(self,i):
+        return self.df.iloc[i]
+    
+    def find(self,team,winheader="winner",loseheader="loser"):
+        return pd.concat([self.df.loc[self.df[winheader] == team],self.df.loc[self.df[loseheader] == team]])
 
     def get_elo(self,winnerindex,loserindex,winnerscore,loserscore):
         sorted_df = self.df.sort_values(by="date")
@@ -129,6 +135,8 @@ class TeamData(Data):
             self.teams[team].stats["elo"] = elos[team]
 
     def __getitem__(self, i):
+        if i not in self.teams:
+            return False
         return self.teams[i]
 
 class SeedData(Data):
