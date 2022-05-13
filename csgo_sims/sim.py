@@ -175,10 +175,21 @@ class Table:
 
     def do_sims(self,play_func,nsims=100,nstages=5,verbose=True,file=None):
         data = {}
+        tree = {}
         for i in self.teams.keys():
             data[i] = {"promotion%":0,"(3-0)%":0,"(3-1)%":0,"(3-2)%":0,"(2-3)%":0,"(1-3)%":0,"(0-3)%":0}
         for sim in range(nsims):
-            results = self.play(play_func,verbose=False,nstages=nstages)
+            results,branch = self.play(play_func,verbose=False,nstages=nstages)
+            temp_tree = tree
+            for line in branch:
+                old = temp_tree
+                if not line in temp_tree:
+                    temp_tree[line] = {"count":1,"next":{}}
+                else:
+                    temp_tree[line]["count"] += 1
+                temp_tree = temp_tree[line]["next"]
+            old[line] = results
+
             for i in results["promoted"]:
                 data[i]["promotion%"] += 1
             possibilities = [(3,0),(3,1),(3,2),(2,3),(1,3),(0,3)]
@@ -206,7 +217,7 @@ class Table:
                 for i in team_list:
                     f.write("{:<18} {:>10} {:>6} {:>6} {:>6} {:>6} {:>6} {:>6}\n".format(i,*[str(round((data[i][key]*100)))+"%" for key in data[i].keys()]))
 
-        return data
+        return data,tree
 
     def play(self,play_func,verbose=True,nstages=5):
         self.reset()
@@ -234,8 +245,14 @@ class Table:
                 out[record].append(i)
             else:
                 out[record] = [i]
-
-        return out
+        branch = []
+        for stage in self.rounds[:-1]:
+            matchups = []
+            for matchup in stage:
+                matchups.append((matchup.winner.name,matchup.loser.name))
+            branch.append(tuple(matchups))
+        branch = tuple(branch)
+        return out,branch
 
     def print_round(self,round):
         print("==========================Round"+str(round)+"===========================")
@@ -274,7 +291,25 @@ class Table:
             else:
                 ts.sort(key=lambda x:x.seed)
                 ts.sort(key=lambda x:x.buch(),reverse=True)
-            games += [Match(*game) for game in list(zip(ts[:len(ts)//2],ts[len(ts)//2:][::-1]))]
+            if round == 3:
+                temp1 = ts[:len(ts)//2] + ts[len(ts)//2:]
+                temp2 = ts[len(ts)//2:][::-1] + ts[:len(ts)//2][::-1]
+                while len(temp1) != 0:
+                    current = temp1[0]
+                    for idx in range(len(temp2)):
+                        if temp2[idx].name != current.name:
+                            if not temp2[idx].name in [i.name for i in current.prior_opponents]:
+                                games.append(Match(current,temp2[idx]))
+                                temp2.pop(idx)
+                                break
+                    temp1.pop(0)
+                    for idx in range(len(temp2)):
+                        if temp2[idx].name == current.name:
+                            temp2.pop(idx)
+                            break
+                #games += [Match(*game) for game in list(zip(ts[:len(ts)//2],ts[len(ts)//2:][::-1]))]
+            else:
+                games += [Match(*game) for game in list(zip(ts[:len(ts)//2],ts[len(ts)//2:][::-1]))]
         self.rounds.append(games)
 
 class PlayFunc(object):
