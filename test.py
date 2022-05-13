@@ -8,3 +8,5 @@ team_stats.get_elo(matches,"winner","loser","winnerscore","loserscore")
 
 seeds = csgo_sims.SeedData("data/team_seeds.csv")
 table = csgo_sims.Table(team_stats,seeds)
+
+table.play(csgo_sims.PlayFunc.random)
